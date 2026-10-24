@@ -1,0 +1,9 @@
+name,hint,orientation_order,intersection_density_km2,four_way_share,three_way_share,dead_end_share,street_length_avg_m,streets_per_node_avg,circuity_avg
+Jayanagar 4th Block,1940s-50s planned extension in the south,0.959,219.0,0.373,0.609,0.005,71.1,3.39,1.006
+Basavanagudi,1898 plague-era extension next to Bull Temple,0.79,212.0,0.348,0.589,0.054,69.8,3.23,1.015
+Malleshwaram,"1898 northern extension, numbered crosses and mains",0.943,225.0,0.343,0.487,0.17,62.7,3.0,1.015
+Chickpet (old Pete),the pre-colonial market town around Kempegowda's fort,0.572,590.0,0.158,0.704,0.139,37.1,2.88,1.022
+Koramangala,"BDA layout of the 1970s-80s, divided into blocks",0.311,216.0,0.077,0.801,0.122,65.4,2.83,1.018
+Indiranagar,1970s BDA layout east of the cantonment,0.914,233.0,0.232,0.637,0.127,65.3,2.97,1.012
+Whitefield,"former Anglo-Indian settlement, now an IT corridor",0.576,115.0,0.075,0.59,0.335,70.9,2.4,1.021
+Electronic City Phase 1,1978 industrial estate on Hosur Road,0.399,33.0,0.205,0.545,0.25,106.2,2.7,1.04

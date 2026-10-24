@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guess the Galli</title>
+<style>
+  /* Warm yellow and green palette */
+  :root {
+    --bg: #fbf6e9; --card: #ffffff; --ink: #1f2a1f; --muted: #6a6f63;
+    --line: #e7dfc8; --yellow: #f5c518; --yellow-ink: #1f2a1f;
+    --green: #1f7a4a; --red: #c0442c; --street: #1f2a1f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141812; --card: #1e241c; --ink: #f1efe6; --muted: #a8ad9f;
+      --line: #333b2f; --yellow: #f5c518; --yellow-ink: #141812;
+      --green: #4fc283; --red: #ef7a62; --street: #f1efe6;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141812; --card: #1e241c; --ink: #f1efe6; --muted: #a8ad9f;
+    --line: #333b2f; --yellow: #f5c518; --yellow-ink: #141812;
+    --green: #4fc283; --red: #ef7a62; --street: #f1efe6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 17px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 880px; margin: 0 auto; padding: 20px 16px 40px; }
+  .screen { display: none; }
+  .screen.show { display: block; }
+  button {
+    font: inherit; color: var(--ink); background: var(--card); border: 2px solid var(--line);
+    border-radius: 12px; padding: 12px 14px; cursor: pointer; transition: transform .1s, border-color .15s;
+  }
+  button:hover:not(:disabled) { border-color: var(--yellow); }
+  button:active:not(:disabled) { transform: scale(.97); }
+  button:disabled { cursor: default; opacity: .9; }
+  .big {
+    background: var(--yellow); color: var(--yellow-ink); border-color: var(--yellow);
+    font-weight: 700; font-size: 1.15rem; padding: 14px 28px;
+  }
+
+  /* Start screen */
+  #start { text-align: center; padding-top: 6vh; }
+  #start h1 { font-size: clamp(2.4rem, 9vw, 4rem); line-height: 1.05; margin: 0 0 12px; letter-spacing: -.02em; }
+  #start h1 span { background: var(--yellow); color: var(--yellow-ink); padding: 0 .2em; border-radius: 8px; }
+  #start p { max-width: 520px; margin: 0 auto 24px; color: var(--muted); font-size: 1.1rem; }
+  svg.streets.teaser { width: min(240px, 60vw); margin: 0 auto 24px; }
+
+  /* Game screen */
+  .bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 600; }
+  .bar .muted { color: var(--muted); font-weight: 500; }
+  .streak { color: var(--green); min-height: 1.5em; }
+  .streak.pop { animation: pop .4s ease-out; }
+  @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 320px); gap: 18px; }
+  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+  .map { padding: 10px; }
+  svg.streets { display: block; width: 100%; height: auto; aspect-ratio: 1; }
+  svg.streets path { fill: none; stroke: var(--street); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+  svg.streets.draw path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.4s ease-out forwards; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .caption { font-size: .85rem; color: var(--muted); text-align: center; margin-top: 4px; }
+  h2 { font-size: 1.25rem; margin: 0 0 12px; }
+  .choices { display: grid; gap: 10px; }
+  .choices button { text-align: left; font-weight: 600; }
+  .choices button.gone { visibility: hidden; }
+  .choices button.correct { border-color: var(--green); background: color-mix(in srgb, var(--green) 18%, var(--card)); }
+  .choices button.wrong { border-color: var(--red); background: color-mix(in srgb, var(--red) 18%, var(--card)); }
+  .helpers { display: flex; gap: 10px; margin-top: 12px; }
+  .helpers button { flex: 1; font-size: .95rem; padding: 10px; }
+  .points { font-size: .85rem; color: var(--muted); margin-top: 8px; text-align: center; }
+  .clue { display: none; margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+          background: color-mix(in srgb, var(--yellow) 22%, var(--card)); font-style: italic; }
+  .clue.show { display: block; }
+  .reveal { display: none; margin-top: 14px; }
+  .reveal.show { display: block; animation: fade .3s ease-out; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .verdict { font-size: 1.4rem; font-weight: 800; margin: 0 0 6px; }
+  .verdict.good { color: var(--green); } .verdict.bad { color: var(--red); }
+  .reveal p { margin: 6px 0; }
+  .reveal .fact { color: var(--muted); font-size: .95rem; }
+  .reveal .big { width: 100%; margin-top: 12px; }
+
+  /* End screen */
+  #end { text-align: center; }
+  .score { font-size: clamp(3rem, 14vw, 5rem); font-weight: 800; line-height: 1; margin: 12px 0 4px; }
+  .rank { display: inline-block; background: var(--yellow); color: var(--yellow-ink); font-weight: 700;
+          padding: 6px 14px; border-radius: 999px; margin-bottom: 18px; }
+  .end-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px; }
+  .copied { color: var(--green); min-height: 1.5em; font-weight: 600; }
+  .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; text-align: left; }
+  .thumbs figure { margin: 0; }
+  .thumbs svg.streets { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+  .thumbs svg.streets path { stroke-width: 6; }
+  .thumbs figcaption { font-size: .85rem; font-weight: 600; text-align: center; margin-top: 4px; }
+  .thumbs .mark { color: var(--muted); font-weight: 500; }
+  details { margin-top: 32px; text-align: left; font-size: .9rem; }
+  summary { cursor: pointer; color: var(--muted); font-weight: 600; }
+  .table-wrap { overflow-x: auto; margin-top: 10px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); }
+  .note { font-size: .8rem; color: var(--muted); margin-top: 28px; text-align: center; }
+</style>
+</head>
+<body>
+<main>
+
+  <section class="screen show" id="start">
+    <h1>Guess the <span>Galli</span></h1>
+    <p>We took 8 Bengaluru neighbourhoods and wiped off every name, shop and landmark. All that's left is the streets. How well do you really know Namma Ooru?</p>
+    <svg class="streets teaser draw" id="teaser" viewBox="0 0 1000 1000" aria-hidden="true"></svg>
+    <div><button class="big" id="play">Let's play</button></div>
+  </section>
+
+  <section class="screen" id="game">
+    <div class="bar">
+      <span class="muted" id="progress"></span>
+      <span class="streak" id="streak"></span>
+      <span id="score"></span>
+    </div>
+    <div class="layout">
+      <div class="card map">
+        <svg class="streets" id="map" viewBox="0 0 1000 1000" role="img" aria-label="Mystery street map"></svg>
+        <div class="caption">A 1 km square, north is up</div>
+      </div>
+      <div class="card">
+        <h2>Where in Bengaluru is this?</h2>
+        <div class="choices" id="choices"></div>
+        <div class="helpers" id="helpers">
+          <button id="clueBtn">Give me a clue</button>
+          <button id="fiftyBtn">50-50</button>
+        </div>
+        <div class="points" id="points"></div>
+        <div class="clue" id="clue"></div>
+        <div class="reveal" id="reveal">
+          <div class="verdict" id="verdict"></div>
+          <p id="spot"></p>
+          <p class="fact" id="fact"></p>
+          <button class="big" id="next">Next</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="end">
+    <div class="score" id="final"></div>
+    <div class="rank" id="rank"></div>
+    <div class="end-buttons">
+      <button class="big" id="again">Play again</button>
+      <button id="copy">Copy my score</button>
+    </div>
+    <div class="copied" id="copied"></div>
+    <h2>Here's who was who</h2>
+    <div class="thumbs" id="thumbs"></div>
+
+    <details>
+      <summary>For the map nerds</summary>
+      <p>Street data comes from OpenStreetMap (drivable roads only). Here is what makes each area look the way it does. "Grid score" is 1 for streets running in just two directions and 0 for streets pointing everywhere.</p>
+      <div class="table-wrap"><table id="table"></table></div>
+    </details>
+  </section>
+
+  <p class="note">Street data &copy; OpenStreetMap contributors</p>
+</main>
+
+<script>
+const ROUNDS = __ROUNDS__;
+const RANKS = [
+  [24, "You ARE Bengaluru"],
+  [19, "Walking street map"],
+  [13, "Seasoned local"],
+  [7, "Weekend explorer"],
+  [0, "Still finding your way"],
+];
+
+const $ = (id) => document.getElementById(id);
+let order = [], current = 0, score = 0, streak = 0, worth = 3, results = {};
+
+function shuffle(list) {
+  const a = list.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// One <path> per street so they all draw in at the same time.
+// pathLength="1" lets the CSS dash animation work regardless of street length.
+function streetPaths(d) {
+  return d.split("M").filter(Boolean)
+    .map((seg) => `<path pathLength="1" d="M${seg.trim()}"></path>`).join("");
+}
+
+function drawMap(svg, d) {
+  svg.classList.remove("draw");
+  svg.innerHTML = streetPaths(d);
+  void svg.getBoundingClientRect();  // restart the animation
+  svg.classList.add("draw");
+}
+
+function updateBar() {
+  $("progress").textContent = `Round ${current + 1} of ${ROUNDS.length}`;
+  $("score").textContent = `${score} pts`;
+  $("points").textContent = `This one is worth ${worth} point${worth === 1 ? "" : "s"}`;
+}
+
+function showRound() {
+  const r = ROUNDS[order[current]];
+  worth = 3;
+  drawMap($("map"), r.streets);
+  $("reveal").classList.remove("show");
+  $("clue").classList.remove("show");
+  $("helpers").style.display = "";
+  $("points").style.display = "";
+  $("clueBtn").disabled = false;
+  $("fiftyBtn").disabled = false;
+
+  const others = shuffle(ROUNDS.filter((x) => x.name !== r.name)).slice(0, 3).map((x) => x.name);
+  $("choices").innerHTML = "";
+  shuffle([r.name, ...others]).forEach((name) => {
+    const b = document.createElement("button");
+    b.textContent = name;
+    b.onclick = () => guess(b, name, r);
+    $("choices").appendChild(b);
+  });
+  updateBar();
+}
+
+function useClue() {
+  const r = ROUNDS[order[current]];
+  $("clue").textContent = r.clue;
+  $("clue").classList.add("show");
+  $("clueBtn").disabled = true;
+  worth = Math.min(worth, 2);
+  updateBar();
+}
+
+function useFifty() {
+  const r = ROUNDS[order[current]];
+  const wrong = [...$("choices").children].filter((b) => b.textContent !== r.name);
+  shuffle(wrong).slice(0, 2).forEach((b) => b.classList.add("gone"));
+  $("fiftyBtn").disabled = true;
+  worth = 1;
+  updateBar();
+}
+
+function guess(button, name, r) {
+  const right = name === r.name;
+  results[r.name] = right;
+  if (right) { score += worth; streak++; } else { streak = 0; }
+
+  for (const b of $("choices").children) {
+    b.disabled = true;
+    if (b.textContent === r.name) { b.classList.add("correct"); b.classList.remove("gone"); }
+  }
+  if (!right) button.classList.add("wrong");
+  $("helpers").style.display = "none";
+  $("points").style.display = "none";
+
+  $("streak").textContent = streak >= 2 ? `${streak} in a row!` : "";
+  $("streak").classList.remove("pop");
+  void $("streak").offsetWidth;
+  if (streak >= 2) $("streak").classList.add("pop");
+
+  $("verdict").textContent = right ? `Correct! +${worth}` : `Nope, that was ${r.name}`;
+  $("verdict").className = "verdict " + (right ? "good" : "bad");
+  $("spot").textContent = r.spot_it;
+  $("fact").textContent = r.fact;
+  $("next").textContent = current + 1 < ROUNDS.length ? "Next" : "See my score";
+  $("reveal").classList.add("show");
+  $("score").textContent = `${score} pts`;
+}
+
+function rankFor(points) {
+  return RANKS.find(([min]) => points >= min)[1];
+}
+
+function showScreen(id) {
+  for (const s of document.querySelectorAll(".screen")) s.classList.toggle("show", s.id === id);
+  window.scrollTo(0, 0);
+}
+
+function showEnd() {
+  showScreen("end");
+  const max = ROUNDS.length * 3;
+  $("final").textContent = `${score}/${max}`;
+  $("rank").textContent = rankFor(score);
+  $("copied").textContent = "";
+
+  $("thumbs").innerHTML = ROUNDS.map((r) =>
+    `<figure><svg class="streets" viewBox="0 0 1000 1000">${streetPaths(r.streets)}</svg>
+     <figcaption>${r.name} <span class="mark">${results[r.name] ? "- got it" : "- missed"}</span></figcaption></figure>`
+  ).join("");
+
+  const rows = ROUNDS.slice().sort((a, b) => b.metrics.order - a.metrics.order);
+  $("table").innerHTML = `<tr><th>Area</th><th>Grid score</th><th>Junctions per km&sup2;</th>
+    <th>Crossroads</th><th>Dead ends</th><th>Avg street (m)</th></tr>` +
+    rows.map((r) => {
+      const m = r.metrics;
+      return `<tr><td>${r.name}</td><td>${m.order.toFixed(2)}</td><td>${Math.round(m.density)}</td>
+        <td>${Math.round(m.four * 100)}%</td><td>${Math.round(m.dead * 100)}%</td><td>${Math.round(m.length)}</td></tr>`;
+    }).join("");
+}
+
+async function copyScore() {
+  const text = `Guess the Galli: ${score}/${ROUNDS.length * 3} - ${rankFor(score)}. Can you beat me?`;
+  // Show the text first, so people can copy it by hand if the clipboard is blocked
+  $("copied").textContent = text;
+  try {
+    await navigator.clipboard.writeText(text);
+    $("copied").textContent = "Copied! Paste it in the family group.";
+  } catch (e) {}
+}
+
+function start() {
+  order = shuffle(ROUNDS.map((_, i) => i));
+  current = 0; score = 0; streak = 0; results = {};
+  $("streak").textContent = "";
+  showScreen("game");
+  showRound();
+}
+
+$("play").onclick = start;
+$("again").onclick = start;
+$("copy").onclick = copyScore;
+$("clueBtn").onclick = useClue;
+$("fiftyBtn").onclick = useFifty;
+$("next").onclick = () => {
+  current++;
+  if (current < ROUNDS.length) showRound(); else showEnd();
+};
+
+// Teaser on the start screen: Chickpet's tangle draws itself in
+$("teaser").innerHTML = streetPaths(ROUNDS.find((r) => r.name.startsWith("Chickpet")).streets);
+</script>
+</body>
+</html>
