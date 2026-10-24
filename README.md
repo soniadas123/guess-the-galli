@@ -1,6 +1,8 @@
 # Guess the Galli
 
-Guess 8 Bengaluru neighbourhoods from their street maps alone. Open `streets_game.html` in any browser; it is a single self-contained file.
+**Play it here: https://soniadas123.github.io/guess-the-galli/**
+
+Guess 8 Bengaluru neighbourhoods from their street maps alone. Or open `streets_game.html` in any browser; it is a single self-contained file.
 
 ## Rebuild
 
